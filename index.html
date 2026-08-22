@@ -39,10 +39,14 @@
           <label for="racer-name">Who ran?</label>
           <input id="racer-name" name="name" type="text" autocomplete="nickname" maxlength="40" placeholder="Type a name" required>
         </div>
-        <div class="field">
-          <label for="racer-time">How many seconds?</label>
-          <input id="racer-time" name="time" type="text" inputmode="decimal" autocomplete="off" placeholder="5.55  or  1:05.20" aria-describedby="time-hint" required>
-          <p id="time-hint" class="hint">Use 5.55, 5,55, or 1:05.20</p>
+        <div class="field stopwatch-field">
+          <p class="stopwatch-label" id="clock-label">Lap time</p>
+          <p class="clock" id="clock" aria-labelledby="clock-label">0.00s</p>
+          <div class="clock-actions">
+            <button type="button" id="clock-start" class="btn-start">GO!</button>
+            <button type="button" id="clock-stop" class="btn-stop" hidden>STOP</button>
+            <button type="button" id="clock-reset" class="btn-clock-reset">Reset</button>
+          </div>
         </div>
         <p id="form-error" class="form-error" role="alert" hidden></p>
         <button type="submit" class="btn-go">Add to the board!</button>
