@@ -8,7 +8,10 @@
 
   var form = document.getElementById("add-form");
   var nameInput = document.getElementById("racer-name");
-  var timeInput = document.getElementById("racer-time");
+  var clockEl = document.getElementById("clock");
+  var startBtn = document.getElementById("clock-start");
+  var stopBtn = document.getElementById("clock-stop");
+  var clockResetBtn = document.getElementById("clock-reset");
   var formError = document.getElementById("form-error");
   var emptyState = document.getElementById("empty-state");
   var podiumEl = document.getElementById("podium");
@@ -27,6 +30,11 @@
   var pendingAction = null;
   var lastFocus = null;
   var bannerTimer = null;
+  var clockRunning = false;
+  var clockStart = 0;
+  var clockElapsed = 0;
+  var clockRaf = 0;
+  var wakeLock = null;
 
   function uid() {
     return "lap-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
@@ -94,6 +102,73 @@
 
   function formatTime(seconds) {
     return seconds.toFixed(2) + "s";
+  }
+
+  function clockSeconds() {
+    var extra = clockRunning ? (performance.now() - clockStart) / 1000 : 0;
+    return clockElapsed + extra;
+  }
+
+  function paintClock() {
+    clockEl.textContent = formatTime(clockSeconds());
+  }
+
+  function tickClock() {
+    paintClock();
+    if (clockRunning) {
+      clockRaf = requestAnimationFrame(tickClock);
+    }
+  }
+
+  function setClockButtons() {
+    startBtn.hidden = clockRunning;
+    stopBtn.hidden = !clockRunning;
+  }
+
+  function startClock() {
+    if (clockRunning) return;
+    clearError();
+    clockElapsed = 0;
+    clockStart = performance.now();
+    clockRunning = true;
+    setClockButtons();
+    clockEl.classList.add("running");
+    tickClock();
+    if (navigator.wakeLock && navigator.wakeLock.request) {
+      navigator.wakeLock.request("screen").then(function (lock) {
+        wakeLock = lock;
+      }).catch(function () {});
+    }
+  }
+
+  function stopClock() {
+    if (!clockRunning) return;
+    clockElapsed += (performance.now() - clockStart) / 1000;
+    clockRunning = false;
+    if (clockRaf) cancelAnimationFrame(clockRaf);
+    clockRaf = 0;
+    setClockButtons();
+    clockEl.classList.remove("running");
+    paintClock();
+    if (wakeLock) {
+      wakeLock.release().catch(function () {});
+      wakeLock = null;
+    }
+  }
+
+  function resetClock() {
+    clockRunning = false;
+    clockStart = 0;
+    clockElapsed = 0;
+    if (clockRaf) cancelAnimationFrame(clockRaf);
+    clockRaf = 0;
+    setClockButtons();
+    clockEl.classList.remove("running");
+    paintClock();
+    if (wakeLock) {
+      wakeLock.release().catch(function () {});
+      wakeLock = null;
+    }
   }
 
   function nameKey(name) {
@@ -340,16 +415,17 @@
     clearError();
 
     var name = nameInput.value.trim();
-    var time = parseTime(timeInput.value);
+    if (clockRunning) stopClock();
+    var time = clockElapsed;
 
     if (!name) {
       showError("Who ran? Type a name first.");
       nameInput.focus();
       return;
     }
-    if (time === null) {
-      showError("Need a time bigger than 0 — try 5.55 or 1:05.20.");
-      timeInput.focus();
+    if (!(time > 0)) {
+      showError("Hit GO, then STOP when they finish.");
+      startBtn.focus();
       return;
     }
 
@@ -365,7 +441,7 @@
     saveRacers();
     render();
 
-    timeInput.value = "";
+    resetClock();
     nameInput.value = "";
     nameInput.focus();
 
@@ -377,6 +453,13 @@
     if (btn) {
       askDelete(btn.getAttribute("data-delete"));
     }
+  });
+
+  startBtn.addEventListener("click", startClock);
+  stopBtn.addEventListener("click", stopClock);
+  clockResetBtn.addEventListener("click", function () {
+    resetClock();
+    clearError();
   });
 
   resetBtn.addEventListener("click", askReset);
