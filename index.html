@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#FF2E8A">
+  <meta name="description" content="SPRINT STARS — a kid-friendly backyard lap-race scoreboard.">
+  <title>SPRINT STARS — Lap Race!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bungee&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="sky" aria-hidden="true"></div>
+  <div class="grass" aria-hidden="true"></div>
+  <div class="track-oval" aria-hidden="true"></div>
+  <div class="lane-dashes" aria-hidden="true"></div>
+
+  <a class="skip-link" href="#add-form">Skip to add a racer</a>
+
+  <header class="hero">
+    <div class="checkered checkered-top" aria-hidden="true"></div>
+    <p class="eyebrow">backyard dash day</p>
+    <h1>
+      <span class="flag" aria-hidden="true">🏁</span>
+      SPRINT STARS
+      <span class="flag" aria-hidden="true">🏁</span>
+    </h1>
+    <p class="tagline">Fastest lap wins. Ready, set, GO!</p>
+    <div class="checkered checkered-bottom" aria-hidden="true"></div>
+  </header>
+
+  <main class="wrap">
+    <section class="card add-card" aria-labelledby="add-heading">
+      <h2 id="add-heading">Add a racer</h2>
+      <form id="add-form" novalidate>
+        <div class="field">
+          <label for="racer-name">Who ran?</label>
+          <input id="racer-name" name="name" type="text" autocomplete="nickname" maxlength="40" placeholder="Type a name" required>
+        </div>
+        <div class="field">
+          <label for="racer-time">How many seconds?</label>
+          <input id="racer-time" name="time" type="text" inputmode="decimal" autocomplete="off" placeholder="5.55  or  1:05.20" aria-describedby="time-hint" required>
+          <p id="time-hint" class="hint">Use 5.55, 5,55, or 1:05.20</p>
+        </div>
+        <p id="form-error" class="form-error" role="alert" hidden></p>
+        <button type="submit" class="btn-go">Add to the board!</button>
+      </form>
+    </section>
+
+    <section class="board" aria-labelledby="board-heading">
+      <div class="board-head">
+        <h2 id="board-heading">Top 10 laps</h2>
+        <p id="racer-count" class="racer-count" hidden></p>
+      </div>
+
+      <div id="empty-state" class="empty" hidden>
+        <p class="empty-emoji" aria-hidden="true">👟</p>
+        <p>Nobody on the track yet — add a racer!</p>
+      </div>
+
+      <div id="podium" class="podium" hidden></div>
+      <ol id="rest-list" class="rest-list" hidden></ol>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <button type="button" id="reset-btn" class="btn-reset">Reset board</button>
+    <p>Made for park sprints and backyard dashes.</p>
+  </footer>
+
+  <div id="banner" class="banner" role="status" aria-live="polite" hidden>
+    <span class="banner-star" aria-hidden="true">⭐</span>
+    NEW RECORD!
+    <span class="banner-star" aria-hidden="true">⭐</span>
+  </div>
+
+  <div id="confetti" class="confetti" aria-hidden="true"></div>
+
+  <div id="modal" class="modal" hidden>
+    <div class="modal-backdrop" data-modal-cancel></div>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <h2 id="modal-title">Are you sure?</h2>
+      <p id="modal-message"></p>
+      <div class="modal-actions">
+        <button type="button" id="modal-cancel" class="btn-ghost">Keep them</button>
+        <button type="button" id="modal-ok" class="btn-danger">Yes, take them off</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
