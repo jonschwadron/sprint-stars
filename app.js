@@ -1,9 +1,7 @@
 (function () {
   "use strict";
 
-  var STORAGE_KEY = "lap-race-scoreboard-v1";
-  var SEED_NAME = "Mahalya";
-  var SEED_TIME = 5.55;
+  var API_URL = "https://jsonblob.iiif.arthistoricum.net/api/jsonBlob/0966ebae-9f17-11f1-bdf1-e16059762aba";
   var TOP_N = 10;
 
   var form = document.getElementById("add-form");
@@ -40,64 +38,47 @@
     return "lap-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
   }
 
-  function seedRacer() {
-    return { id: uid(), name: SEED_NAME, time: SEED_TIME, createdAt: Date.now() };
+  function normalizeRacers(list) {
+    if (!Array.isArray(list)) return [];
+    return list
+      .filter(function (row) {
+        return row && typeof row.name === "string" && typeof row.time === "number" && isFinite(row.time) && row.time > 0;
+      })
+      .map(function (row) {
+        return {
+          id: typeof row.id === "string" ? row.id : uid(),
+          name: row.name,
+          time: row.time,
+          createdAt: typeof row.createdAt === "number" ? row.createdAt : Date.now()
+        };
+      });
   }
 
   function loadRacers() {
-    try {
-      var raw = localStorage.getItem(STORAGE_KEY);
-      if (raw === null || raw === "") {
-        racers = [seedRacer()];
-        saveRacers();
-        return;
-      }
-      var parsed = JSON.parse(raw);
-      if (!Array.isArray(parsed)) {
-        racers = [seedRacer()];
-        saveRacers();
-        return;
-      }
-      racers = parsed
-        .filter(function (row) {
-          return row && typeof row.name === "string" && typeof row.time === "number" && isFinite(row.time) && row.time > 0;
-        })
-        .map(function (row) {
-          return {
-            id: typeof row.id === "string" ? row.id : uid(),
-            name: row.name,
-            time: row.time,
-            createdAt: typeof row.createdAt === "number" ? row.createdAt : Date.now()
-          };
-        });
-    } catch (err) {
-      racers = [seedRacer()];
-      saveRacers();
-    }
+    return fetch(API_URL, { headers: { Accept: "application/json" }, cache: "no-store" })
+      .then(function (res) {
+        if (!res.ok) throw new Error("load failed");
+        return res.json();
+      })
+      .then(function (data) {
+        racers = normalizeRacers(data && data.racers);
+        render();
+      })
+      .catch(function () {
+        racers = [];
+        render();
+        showError("Could not load the board. Check the signal and try again.");
+      });
   }
 
   function saveRacers() {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(racers));
-  }
-
-  function parseTime(value) {
-    if (typeof value !== "string") return null;
-    var raw = value.trim().replace(",", ".");
-    if (!raw) return null;
-
-    var clock = raw.match(/^(\d+):([0-5]?\d)(?:\.(\d{1,2}))?$/);
-    if (clock) {
-      var minutes = Number(clock[1]);
-      var seconds = Number(clock[2]);
-      var frac = clock[3] ? Number("0." + clock[3]) : 0;
-      var total = minutes * 60 + seconds + frac;
-      return total > 0 && isFinite(total) ? total : null;
-    }
-
-    if (!/^\d+(\.\d+)?$/.test(raw)) return null;
-    var n = Number(raw);
-    if (!isFinite(n) || n <= 0) return null;
-    return n;
+    return fetch(API_URL, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({ racers: racers })
+    }).then(function (res) {
+      if (!res.ok) throw new Error("save failed");
+    });
   }
 
   function formatTime(seconds) {
@@ -389,9 +370,14 @@
       okLabel: "Yes, take them off",
       cancelLabel: "Keep them",
       onConfirm: function () {
+        var previous = racers;
         racers = racers.filter(function (r) { return r.id !== id; });
-        saveRacers();
         render();
+        saveRacers().catch(function () {
+          racers = previous;
+          render();
+          showError("Could not save. That racer is still on the board.");
+        });
       }
     });
   }
@@ -399,13 +385,18 @@
   function askReset() {
     openModal({
       title: "Start over?",
-      message: "Wipe the board and put Mahalya back at 5.55s?",
+      message: "Wipe every time off the board?",
       okLabel: "Yes, reset",
       cancelLabel: "Keep racing",
       onConfirm: function () {
-        racers = [seedRacer()];
-        saveRacers();
+        var previous = racers;
+        racers = [];
         render();
+        saveRacers().catch(function () {
+          racers = previous;
+          render();
+          showError("Could not reset. Times are still on the board.");
+        });
       }
     });
   }
@@ -432,20 +423,28 @@
     var leader = currentLeaderTime();
     var isNewRecord = leader === null || time < leader;
 
-    racers.push({
+    var entry = {
       id: uid(),
       name: name,
       time: time,
       createdAt: Date.now()
-    });
-    saveRacers();
+    };
+    racers.push(entry);
     render();
 
     resetClock();
     nameInput.value = "";
     nameInput.focus();
 
-    if (isNewRecord) celebrate();
+    saveRacers()
+      .then(function () {
+        if (isNewRecord) celebrate();
+      })
+      .catch(function () {
+        racers = racers.filter(function (r) { return r.id !== entry.id; });
+        render();
+        showError("Could not save that lap. Try again.");
+      });
   });
 
   document.addEventListener("click", function (event) {
@@ -483,5 +482,4 @@
   });
 
   loadRacers();
-  render();
 })();
